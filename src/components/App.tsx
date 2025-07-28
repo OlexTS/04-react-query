@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import toast, { Toaster } from "react-hot-toast";
 import css from "./App.module.css";
 import SearchBar from "./SearchBar/SearchBar";
@@ -10,26 +11,27 @@ import ErrorMessage from "./ErrorMessage/ErrorMessage";
 import MovieModal from "./MovieModal/MovieModal";
 
 function App() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
+  const {
+    data: movies=[],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["movies", searchQuery],
+    queryFn: () => fetchMovies(searchQuery),
+    enabled: !!searchQuery,
+  });
+
   const handleSearch = async (movie: string) => {
-    try {
-      setError(null);
-      setIsLoading(true);
-      const data = await fetchMovies(movie);
-      if (data.length === 0) {
-        toast.error("No movies found for your request.");
-      }
-      setMovies(data);
-    } catch (error) {
-      console.log(error);
-      setError("error");
-    } finally {
-      setIsLoading(false);
+    setSearchQuery(movie);
+    const result = await refetch();
+    if (result.data?.length === 0) {
+      toast.error("No movies found for your request.");
     }
   };
 
@@ -48,7 +50,7 @@ function App() {
   return (
     <div className={css.app}>
       <SearchBar onSubmit={handleSearch} />
-      {error ? (
+      {isError ? (
         <ErrorMessage />
       ) : (
         movies.length > 0 && (
