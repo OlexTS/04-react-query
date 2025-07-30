@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import toast, { Toaster } from "react-hot-toast";
+import ReactPaginate from "react-paginate";
 import css from "./App.module.css";
 import SearchBar from "./SearchBar/SearchBar";
 import { fetchMovies } from "../services/movieService";
@@ -12,27 +13,28 @@ import MovieModal from "./MovieModal/MovieModal";
 
 function App() {
   const [searchQuery, setSearchQuery] = useState<string>("");
-
+  const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const {
-    data: movies=[],
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["movies", searchQuery],
-    queryFn: () => fetchMovies(searchQuery),
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["movies", searchQuery, page],
+    queryFn: () => fetchMovies(searchQuery, page),
     enabled: !!searchQuery,
   });
-
-  const handleSearch = async (movie: string) => {
-    setSearchQuery(movie);
-    const result = await refetch();
-    if (result.data?.length === 0) {
+  
+  useEffect(() => {
+    if (data && data.movies.length === 0) {
       toast.error("No movies found for your request.");
     }
+  }, [data]);
+
+  const movies = data?.movies ?? [];
+  const totalPages = data?.totalPages ?? 0;
+
+  const handleSearch = async (movie: string) => {
+    setPage(1);
+    setSearchQuery(movie);
   };
 
   const handleSelect = (id: number) => {
@@ -61,6 +63,17 @@ function App() {
       {isModalOpen && selectedMovie && (
         <MovieModal onClose={handleModalClose} movie={selectedMovie} />
       )}
+      {totalPages>1 && <ReactPaginate
+        pageCount={totalPages}
+        pageRangeDisplayed={5}
+        marginPagesDisplayed={1}
+        onPageChange={({ selected }) => setPage(selected + 1)}
+        forcePage={page - 1}
+        containerClassName={css.pagination}
+        activeClassName={css.active}
+        nextLabel="→"
+        previousLabel="←"
+      />}
       <Toaster />
     </div>
   );

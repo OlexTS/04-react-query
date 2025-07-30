@@ -12,14 +12,19 @@ const options = {
   },
 };
 
-interface MoviesHttpResponse {
+export interface MoviesHttpResponse {
   results: Movie[];
+  total_pages: number;
 }
 
-export const fetchMovies = async (movie: string): Promise<Movie[]> => {
-  const response = await axios.get<MoviesHttpResponse>(
-    `search/movie?query=${movie}&include_adult=false&language=en-US&page=1`,
+export const fetchMovies = async (
+  movie: string,
+  page: number
+): Promise<{ movies: Movie[]; totalPages: number }> => {
+  const { data } = await axios.get<MoviesHttpResponse>(
+    `search/movie?query=${movie}&include_adult=false&language=en-US&page=${page}`,
     options
   );
-  return response.data.results;
+
+  return { movies: data.results, totalPages: data.total_pages };
 };
